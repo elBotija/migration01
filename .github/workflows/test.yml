@@ -1,0 +1,50 @@
+name: "Test Variables Workflow"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_type:
+        description: 'Deploy from Branch or Tag'
+        type: choice
+        required: true
+        options:
+          - branch
+          - tag
+      ref:
+        description: 'Branch name or Tag to deploy'
+        type: string
+        required: true
+
+jobs:
+  test-variables:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.ref_type == 'branch' && format('refs/heads/{0}', inputs.ref) || format('refs/tags/{0}', inputs.ref) }}
+      
+      - name: Load Variables
+        id: load-vars
+        run: |
+          if [ -f .github_execute_vars ]; then
+            source .github_execute_vars
+            echo "LOADED_VAR=${MIVARIABLE}" >> $GITHUB_OUTPUT
+            echo "Variable loaded successfully from ${{ inputs.ref_type }} ${{ inputs.ref }}"
+            echo "Value is: ${MIVARIABLE}"
+          else
+            echo "Error: .github_execute_vars file not found!"
+            exit 1
+          fi
+      
+      - name: Verify Variables
+        run: |
+          echo "Loaded variable value: ${{ steps.load-vars.outputs.LOADED_VAR }}"
+          echo "Current ref type: ${{ inputs.ref_type }}"
+          echo "Current ref: ${{ inputs.ref }}"
+
+      - name: Show File Content
+        run: |
+          echo "Content of .github_execute_vars:"
+          cat .github_execute_vars
