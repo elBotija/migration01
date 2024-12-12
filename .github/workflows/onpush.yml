@@ -1,0 +1,77 @@
+name: Intermediate
+on:
+  push:
+    
+jobs:
+  update-release-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Token length
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_PULL_REQUESTS != '' && secrets.GH_PAT_PULL_REQUESTS || secrets.TEST_TOKEN }}
+        run: |
+          echo "Token length: ${#GH_TOKEN}"
+          echo "fist 4 chars: ${GH_TOKEN:0:4}"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: move
+        run: |
+          echo "estoy en: $(pwd)"
+          cd .. 
+          echo "estoy en: $(pwd)"
+          echo "$(ls -a)"
+          cp -Rf testw/. testw-build
+          echo "$(ls -a)"
+          echo "PATH_FOLDER=$(pwd)" >> $GITHUB_ENV
+      
+      - name: Check and install zip/unzip if not found
+        run: |
+          if ! command -v zip &> /dev/null || ! command -v unzip &> /dev/null
+          then
+            echo "zip/unzip could not be found, installing..."
+            sudo apt-get update && sudo apt-get install -y zip unzip
+          else
+            echo "zip and unzip are already installed"
+          fi
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@0.7.5
+        with:
+          type: 'zip'
+          filename: 'test-file-zip'
+          directory: '${{ env.PATH_FOLDER }}/testw-build'
+          exclusions: '*.git* /*node_modules/* .editorconfig'
+
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-file-zip-artifact
+          path: '${{ env.PATH_FOLDER }}/testw-build/test-file-zip.zip'
+  
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-file-zip-artifact
+      
+      - name: "Show artifact downloaded"
+        run: echo "$(ls -a)"
+
+      - name: "unzip"
+        run: |
+          echo "Descomprimiendo archivo..."
+          unzip -q test-file-zip.zip -d extracted_files
+          echo "Archivo descomprimido"
+
+      - name: "Show all files"
+        run: echo "$(ls -a)"
+
+      - name: "Navigate into unziped folder and list"
+        run: |
+          cd extracted_files
+          echo "Contenido de la carpeta extraída:"
+          echo "$(ls -a)"
+
+  
+      

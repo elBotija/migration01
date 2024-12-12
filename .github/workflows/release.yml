@@ -1,0 +1,46 @@
+name: Update Release Info
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      release_branch:
+        required: true
+        type: string
+      command:
+        required: true
+        type: string
+
+jobs:
+  update-release-info:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: elBotija/releases
+          ref: main
+          persist-credentials: true
+          token: ${{ secrets.PAT_TOKEN }}
+
+
+      - name: Update or create release info file
+        run: |
+          filename="${{ inputs.project_name }}.md"
+          date=$(date +"%Y-%m-%d")
+          echo "- $date | ${{ inputs.release_branch }} | ${{ inputs.command }}" >> $filename
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Update release info for ${{ inputs.project_name }}"
+          git push
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

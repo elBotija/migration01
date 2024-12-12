@@ -1,0 +1,123 @@
+name: 'Comment Test Results on PR'
+
+
+on:
+  workflow_call:
+
+
+jobs:
+  comment_results:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+
+      - name: Check for test results and comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+           
+            // Read results file
+            let results;
+            try {
+              const resultContent = fs.readFileSync('.github_testresults', 'utf8');
+              results = JSON.parse(resultContent);
+            } catch (error) {
+              console.log('No test results found or invalid JSON');
+              return;
+            }
+           
+            // Build Safety results section
+            let safetySection = '';
+            if (results.safety) {
+              // Map status to emoji indicators
+              const safetyStatus = {
+                'success': '✅',
+                'failed': '❌',
+                'skipped': '⚠️'
+              }[results.safety.status] || '❓';
+             
+              safetySection = `## Safety Check Results ${safetyStatus}\n\n`;
+              safetySection += `### ${results.safety.message}\n\n`;
+              safetySection += '<details>\n';
+              safetySection += '<summary>View Safety Check Log</summary>\n\n';
+              safetySection += '```\n';
+              safetySection += results.safety.log;
+              safetySection += '\n```\n';
+              safetySection += '</details>\n\n';
+              safetySection += `🕒 Last updated: ${results.safety.timestamp}\n`;
+              safetySection += `🔗 [View Run](${results.safety.run_url})\n\n`;
+            }
+           
+            // Build Test results section
+            let testSection = '';
+            if (results.test) {
+              // Set status indicators based on test and coverage results
+              const testStatus = results.test.test_status === 'success' ? '✅' : '❌';
+              const coverageStatus = results.test.coverage_status === 'success' ? '✅' : '⚠️';
+             
+              testSection = `## Test Results ${testStatus}\n\n`;
+              testSection += `### ${results.test.test_message}\n\n`;
+              testSection += `### 📊 Code Coverage: ${results.test.coverage}%\n\n`;
+              testSection += `${results.test.coverage_message} (Threshold: ${results.test.coverage_threshold}%) ${coverageStatus}\n\n`;
+              testSection += `🕒 Last updated: ${results.test.timestamp}\n`;
+              testSection += `🔗 [View Run](${results.test.run_url})\n`;
+            }
+           
+            // Show informative message if no results are available
+            if (!safetySection && !testSection) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ No test results available yet.'
+              });
+              return;
+            }
+           
+            // Find existing bot comment to update
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+           
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              (comment.body.includes('Safety Check Results') ||
+               comment.body.includes('Test Results'))
+            );
+           
+            // Prepare complete comment body
+            const commentBody = [
+              '# 🔍 Test Results Summary\n',
+              safetySection,
+              testSection
+            ].join('');
+           
+            // Update existing comment or create new one
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            }
+

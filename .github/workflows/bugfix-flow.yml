@@ -1,0 +1,46 @@
+name: Bugfix Workflow
+
+on:
+  push:
+    branches:
+      - 'bugfix/**'
+      - 'Bugfix/**'
+
+jobs:
+  create_pull_requests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Create Pull Request to Prelive
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          base: prelive
+          title: 'Bugfix: ${{ github.ref_name }} to Prelive'
+          body: |
+            This pull request was automatically created to merge the bugfix branch ${{ github.ref_name }} into prelive.
+            
+            Branch: ${{ github.ref }}
+            
+            Please review the changes and approve if everything looks good.
+          draft: false
+
+      - name: Create Pull Request to Develop
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          base: develop
+          title: 'Bugfix: ${{ github.ref_name }} to Develop'
+          body: |
+            This pull request was automatically created to merge the bugfix branch ${{ github.ref_name }} into develop.
+            
+            Branch: ${{ github.ref }}
+            
+            Please review the changes and approve if everything looks good.
+          draft: false

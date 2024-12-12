@@ -1,0 +1,13 @@
+name: Intermediate
+on:
+  workflow_call:
+    outputs:
+      release:
+        description: "the release version"
+        value: ${{ jobs.call_release.outputs.release }}
+jobs:
+  call_release:
+    uses: elBotija/testw/.github/workflows/a.yml@main
+    with:
+      version: "v2.0.0"
+  

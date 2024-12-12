@@ -1,0 +1,36 @@
+name: Push Feature Code and Create PR
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'Feature/**'
+
+jobs:
+  create_pull_request:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Create Pull Request to Develop
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          base: develop
+          title: 'Auto PR: Merge ${{ github.ref_name }} into Develop'
+          body: |
+            This pull request was automatically created from feature branch to merge changes into develop.
+            
+            Branch: ${{ github.ref }}
+          draft: true
+      
+      - name: Check outputs
+        if: ${{ steps.create-pr.outputs.pull-request-number }}
+        run: |
+          echo "Pull Request Number - ${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.create-pr.outputs.pull-request-url }}"

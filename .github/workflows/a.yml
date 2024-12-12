@@ -1,0 +1,22 @@
+name: Release
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        default: "v1.0.0"
+        type: string
+    outputs:
+      release:
+        description: "the release version"
+        value: ${{ jobs.create_release.outputs.release }}
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.set_release.outputs.release }}
+    steps:
+      - name: Set release
+        id: set_release
+        run: echo "release=pepe" >> $GITHUB_OUTPUT

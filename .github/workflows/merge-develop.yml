@@ -1,0 +1,50 @@
+name: Create Pull Requests on Push to Develop
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - develop
+
+jobs:
+  create_pull_requests:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check if merge is from hotfix or bugfix
+        id: check_branch
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          if [[ $BRANCH_NAME == hotfix/* || $BRANCH_NAME == Hotfix/* || $BRANCH_NAME == bugfix/* || $BRANCH_NAME == Bugfix/* ]]; then
+            echo "is_hotfix_or_bugfix=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_hotfix_or_bugfix=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request to Prelive
+        if: steps.check_branch.outputs.is_hotfix_or_bugfix == 'false'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: develop
+          base: prelive
+          title: 'Auto PR: Merge Develop into Prelive'
+          body: 'This pull request was automatically created to merge the latest changes from develop into prelive.'
+          draft: false
+
+      - name: Create Pull Request to Production
+        if: steps.check_branch.outputs.is_hotfix_or_bugfix == 'false'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: develop
+          base: main
+          title: 'Auto PR: Merge Develop into Production'
+          body: 'This pull request was automatically created to merge the latest changes from develop into production.'
+          draft: false

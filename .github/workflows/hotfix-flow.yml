@@ -1,0 +1,47 @@
+name: Hotfix Workflow
+
+on:
+  push:
+    branches:
+      - 'Hotfix/**'
+      - 'hotfix/**'
+
+jobs:
+  process_hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Merge to development
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout develop
+          git merge --no-ff ${{ github.ref }} -m "Merge hotfix ${{ github.ref }} into develop"
+          git push origin develop
+
+      - name: Build and Deploy to Dev
+        run: |
+          echo "Building for Dev environment"
+          echo "Deploying to Dev environment"
+
+      - name: Build and Deploy to Pre
+        run: |
+          echo "Building for Pre environment"
+          echo "Deploying to Pre environment"
+
+      - name: Create Pull Request to Main
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          base: main
+          title: 'Hotfix: Merge ${{ github.ref }} into Main'
+          body: |
+            This pull request was automatically created to merge the hotfix ${{ github.ref }} into main.
+            
+            Please review and approve.
+          draft: false
